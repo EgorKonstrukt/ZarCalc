@@ -1,4 +1,5 @@
 from __future__ import annotations
+import io
 import os
 import sys
 from pathlib import Path
@@ -12,7 +13,7 @@ from PyQt5.QtCore import pyqtSignal, QTimer, QFileSystemWatcher, Qt
 
 if TYPE_CHECKING:
     from core import AppContext
-    from .script_console import ScriptConsole
+    from ..console.console_api import ConsoleAPI
 
 from .script_api import ScriptAPI
 from .script_runner import build_namespace, run_script, DEFAULT_TIMEOUT_S
@@ -56,12 +57,37 @@ _WATCH_DEBOUNCE_MS = 600
 _PROF_UPDATE_MS    = 500
 
 
+class _ConsoleStream(io.TextIOBase):
+    """File-like object that routes writes to a ConsoleAPI tab."""
+
+    def __init__(self, console_api: "ConsoleAPI", tab_id: str, is_err: bool) -> None:
+        super().__init__()
+        self._api = console_api
+        self._tab_id = tab_id
+        self._is_err = is_err
+
+    def write(self, text: str) -> int:
+        if not text:
+            return 0
+        if self._is_err:
+            self._api.write_stderr(text, tab_id=self._tab_id)
+        else:
+            self._api.write(text, tab_id=self._tab_id)
+        return len(text)
+
+    def flush(self) -> None:
+        pass
+
+
 class ScriptRow(QFrame):
     """
     Panel item widget for one Python script file.
+
     Serialises as type='plugin_item' so FunctionPanel._restore_items
     can reconstruct it from a .zcalc session.
+    Output is forwarded to the ConsoleAPI tab named after the script.
     """
+
     changed = pyqtSignal()
     removed = pyqtSignal(object)
 
@@ -75,7 +101,8 @@ class ScriptRow(QFrame):
         self._api: Optional[ScriptAPI] = None
         self._script_lines: Dict[str, Any] = {}
         self._profiler = ScriptProfiler()
-        self._console: Optional["ScriptConsole"] = None
+        self._console_api: Optional["ConsoleAPI"] = None
+        self._tab_id: Optional[str] = None
         self._watcher = QFileSystemWatcher(self)
         self._watcher.fileChanged.connect(self._on_file_changed)
         self._debounce = QTimer(self)
@@ -89,9 +116,30 @@ class ScriptRow(QFrame):
         if script_path and os.path.isfile(script_path):
             self._watcher.addPath(script_path)
 
-    def set_console(self, console: "ScriptConsole"):
-        """Attach the shared console window so script output is forwarded."""
-        self._console = console
+    def _get_console_api(self) -> Optional["ConsoleAPI"]:
+        if self._console_api is None:
+            self._console_api = self._ctx.get_service("console_api")
+        return self._console_api
+
+    def _tab_label(self) -> str:
+        return self._display_name()
+
+    def _ensure_tab(self) -> Optional[str]:
+        """Create a console tab for this script and return its tab_id."""
+        api = self._get_console_api()
+        if api is None:
+            return None
+        tab_id = f"script::{id(self)}"
+        api.add_script_tab(tab_id, self._tab_label())
+        api.focus_tab(tab_id)
+        self._tab_id = tab_id
+        return tab_id
+
+    def _remove_tab(self) -> None:
+        api = self._get_console_api()
+        if api is not None and self._tab_id is not None:
+            api.remove_script_tab(self._tab_id)
+        self._tab_id = None
 
     def _build_ui(self):
         outer = QVBoxLayout(self)
@@ -173,24 +221,32 @@ class ScriptRow(QFrame):
             return
         if self._api:
             self._api.cleanup()
+
+        tab_id = self._ensure_tab()
         self._api = ScriptAPI(self._ctx, self)
+
         timeout = DEFAULT_TIMEOUT_S
         try:
             from config import Config
             timeout = float(Config().get("script_timeout_s") or DEFAULT_TIMEOUT_S)
         except Exception:
             pass
+
         self._profiler.start()
+
         stdout_real = sys.stdout
         stderr_real = sys.stderr
-        if self._console:
-            from .script_console import ConsoleStream
-            sys.stdout = ConsoleStream(self._console, self._script_name(), is_err=False)
-            sys.stderr = ConsoleStream(self._console, self._script_name(), is_err=True)
+        console_api = self._get_console_api()
+        if console_api is not None and tab_id is not None:
+            sys.stdout = _ConsoleStream(console_api, tab_id, is_err=False)
+            sys.stderr = _ConsoleStream(console_api, tab_id, is_err=True)
+
         ns = build_namespace(self._api)
         ok, err = run_script(code, ns, timeout_s=timeout)
+
         sys.stdout = stdout_real
         sys.stderr = stderr_real
+
         if ok:
             self._running = True
             self._run_btn.setEnabled(False)
@@ -204,6 +260,7 @@ class ScriptRow(QFrame):
                 self._api.cleanup()
                 self._api = None
             self._profiler.stop()
+            self._remove_tab()
             lines = err.strip().splitlines()
             short = lines[-1] if lines else "Error"
             self._set_status(short, error=True)
@@ -220,6 +277,7 @@ class ScriptRow(QFrame):
         if self._running:
             self._profiler.stop()
             self._log_info("Script stopped")
+        self._remove_tab()
         self._prof_timer.stop()
         self._running = False
         self._run_btn.setEnabled(True)
@@ -312,12 +370,16 @@ class ScriptRow(QFrame):
             self._status_lbl.setStyleSheet(_ST_IDLE)
 
     def _log_info(self, msg: str):
-        if self._console:
-            self._console.append_info(msg, self._script_name())
+        api = self._get_console_api()
+        if api is not None:
+            tab = self._tab_id or "__repl__"
+            api.log_info(msg, tab_id=tab, source=self._script_name())
 
     def _log_error(self, msg: str):
-        if self._console:
-            self._console.append_stderr(msg, self._script_name())
+        api = self._get_console_api()
+        if api is not None:
+            tab = self._tab_id or "__repl__"
+            api.write_stderr(msg, tab_id=tab, source=self._script_name())
 
     def to_state(self) -> dict:
         return {
@@ -344,4 +406,5 @@ class ScriptRow(QFrame):
             self._api.cleanup()
         if self._running:
             self._profiler.stop()
+        self._remove_tab()
         super().deleteLater()

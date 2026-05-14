@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import math
+import uuid
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QPen
-from PyQt5.QtCore import Qt
 
 from pyqt5_chart_widget import ChartWidget, _FunctionItem
 from math_engine import (
-    linspace, sample_y, sample_polar, sample_parametric,
-    numerical_deriv, numerical_deriv2, numerical_integral, filter_none,
-    _eval_np_batch, _finalize_y, _NP_OK, _NP_NS,
+    linspace, _eval_np_batch, _finalize_y, _NP_OK, _NP_NS,
 )
 try:
     import _math_core as _cy
@@ -19,6 +18,8 @@ try:
 except ImportError:
     _CY_OK = False
 from config import Config
+from compute_pool import get_pool
+from constants import DERIV_H
 
 if TYPE_CHECKING:
     from core.panels import FunctionPanel
@@ -26,11 +27,13 @@ if TYPE_CHECKING:
 _POLAR_THETA_START = 0.0
 _POLAR_THETA_END = 2 * math.pi
 _EMPTY_XY: Tuple[List, List] = ([], [])
+_DERIV_COLORS = {"_d": "#9b59b6", "_d2": "#e74c3c", "_int": "#2ecc71"}
+_DERIV_LABELS = {"_d": "f'(x)", "_d2": "f''(x)", "_int": "integral f dx"}
+_DRAIN_INTERVAL_MS = 8
 
 
 class _LiveFn:
-    """Mutable callable backing a _FunctionItem; updates in-place without recreating the item."""
-
+    """Mutable callable backing a _FunctionItem; updates in-place."""
     __slots__ = ("_expr", "_extra")
 
     def __init__(self):
@@ -38,7 +41,6 @@ class _LiveFn:
         self._extra: dict = {}
 
     def update(self, expr: str, extra: dict) -> bool:
-        """Return True if state changed."""
         changed = (expr != self._expr) or (extra != self._extra)
         if changed:
             self._expr = expr
@@ -59,7 +61,6 @@ class _LiveFn:
 
 class _RowState:
     """Bundles a _FunctionItem and its _LiveFn for one function row."""
-
     __slots__ = ("item", "live_fn")
 
     def __init__(self, item: _FunctionItem, live_fn: _LiveFn):
@@ -67,26 +68,48 @@ class _RowState:
         self.live_fn = live_fn
 
 
-class Plotter:
-    """Evaluates all function rows and writes results into the ChartWidget."""
+class _InflightTask:
+    """Metadata kept while a task is being computed in a worker process."""
+    __slots__ = ("task_id", "row_ref", "mode", "label", "color", "width", "enabled")
 
-    _DERIV_COLORS = {"_d": "#9b59b6", "_d2": "#e74c3c", "_int": "#2ecc71"}
-    _DERIV_LABELS = {"_d": "f'(x)", "_d2": "f''(x)", "_int": "integral f dx"}
-    _SAMPLERS = {
-        "_d":   numerical_deriv,
-        "_d2":  numerical_deriv2,
-        "_int": numerical_integral,
-    }
+    def __init__(self, task_id, row_ref, mode, label, color, width, enabled):
+        self.task_id = task_id
+        self.row_ref = row_ref
+        self.mode = mode
+        self.label = label
+        self.color = color
+        self.width = width
+        self.enabled = enabled
+
+
+class _InflightDeriv:
+    """Metadata for a derivative/integral overlay task."""
+    __slots__ = ("task_id", "line_key", "dl_ref")
+
+    def __init__(self, task_id, line_key, dl_ref):
+        self.task_id = task_id
+        self.line_key = line_key
+        self.dl_ref = dl_ref
+
+
+class Plotter:
+    """Evaluates all function rows via worker processes and flushes results to ChartWidget."""
 
     def __init__(self, chart: ChartWidget, panel: "FunctionPanel"):
         self._chart = chart
         self._panel = panel
         self._cfg = Config()
-        self._is_animating = False
         self._row_states: Dict[int, _RowState] = {}
+        self._pool = get_pool()
+        self._inflight_rows: Dict[str, _InflightTask] = {}
+        self._inflight_derivs: Dict[str, _InflightDeriv] = {}
+        self._drain_timer = QTimer()
+        self._drain_timer.setSingleShot(False)
+        self._drain_timer.setInterval(_DRAIN_INTERVAL_MS)
+        self._drain_timer.timeout.connect(self._drain)
 
     def set_animating(self, val: bool):
-        self._is_animating = val
+        pass
 
     def _resolution(self) -> float:
         return getattr(self._cfg, "fn_resolution", 1.5)
@@ -109,14 +132,37 @@ class Plotter:
             self._chart.removeItem(state.item)
 
     def sync_fn_items(self):
-        """Remove stale _RowState entries whose rows no longer exist in the panel."""
         live_ids = {id(row) for row in self._panel.func_rows}
         for rid in list(self._row_states):
             if rid not in live_ids:
                 self._remove_state(rid)
 
+    def _drain(self):
+        results = self._pool.drain_results()
+        if not results and not self._inflight_rows and not self._inflight_derivs:
+            self._drain_timer.stop()
+            return
+        for task_id, (xs, ys) in results:
+            row_task = self._inflight_rows.pop(task_id, None)
+            if row_task is not None:
+                line = getattr(row_task.row_ref, "chart_line", None)
+                if line is not None:
+                    suffix = "" if row_task.mode == "y=f(x)" else (" (r)" if row_task.mode == "r=f(t)" else " (p)")
+                    line.setLabel(row_task.label + suffix)
+                    line.pen.setColor(QColor(row_task.color))
+                    line.pen.setWidth(row_task.width)
+                    line.setData(xs=xs, ys=ys)
+                    line.setVisible(row_task.enabled)
+                continue
+            deriv_task = self._inflight_derivs.pop(task_id, None)
+            if deriv_task is not None:
+                dl = deriv_task.dl_ref
+                k = deriv_task.line_key
+                if k in dl:
+                    dl[k].setData(xs=xs, ys=ys)
+                    dl[k].setVisible(True)
+
     def replot(self):
-        """Evaluate all function rows and update the chart."""
         s = self._panel.settings
         x_min, x_max = s.xmin(), s.xmax()
         if x_min >= x_max:
@@ -125,8 +171,8 @@ class Plotter:
         n = self._cfg.anim_samples if any_anim else s.samples()
         t_min, t_max = s.tmin(), s.tmax()
         infinite = s.infinite()
-        x_vals = linspace(x_min, x_max, n)
-        t_vals = linspace(t_min, t_max, n)
+        x_arr = np.ascontiguousarray(linspace(x_min, x_max, n), dtype=np.float64)
+        t_arr = np.ascontiguousarray(linspace(t_min, t_max, n), dtype=np.float64)
         extra = self._panel.get_params()
         self.sync_fn_items()
         total = 0
@@ -156,36 +202,30 @@ class Plotter:
             if not expr:
                 line.setData(xs=[], ys=[])
                 continue
-            try:
-                cx, cy = self._eval_mode(mode, expr, row, x_vals, t_vals, extra)
-                suffix = "" if mode == "y=f(x)" else (" (r)" if mode == "r=f(t)" else " (p)")
-                line.setLabel(label + suffix)
-                line.pen.setColor(QColor(row.color))
-                line.pen.setWidth(row.get_width())
-                line.setData(xs=list(cx), ys=list(cy))
-                line.setVisible(row.is_enabled())
-                total += len(cx)
-            except Exception:
-                line.setData(xs=[], ys=[])
-        self._replot_derivs(x_vals, extra)
+            task_id = str(uuid.uuid4())
+            meta = _InflightTask(
+                task_id, row, mode, label,
+                row.color, row.get_width(), row.is_enabled(),
+            )
+            self._inflight_rows[task_id] = meta
+            if mode == "y=f(x)":
+                self._pool.submit_yfx(task_id, expr, x_arr, dict(extra))
+            elif mode == "r=f(t)":
+                self._pool.submit_polar(task_id, expr, x_arr, dict(extra))
+            elif mode == "param":
+                expr2 = row.get_expr2()
+                if not expr2:
+                    self._inflight_rows.pop(task_id, None)
+                    line.setData(xs=[], ys=[])
+                    continue
+                self._pool.submit_param(task_id, expr, expr2, t_arr, dict(extra))
+            total += n
+        self._submit_derivs(x_arr, extra)
+        if not self._drain_timer.isActive():
+            self._drain_timer.start()
         return total, x_min, x_max, len(self._panel.func_rows)
 
-    @staticmethod
-    def _eval_mode(mode: str, expr: str, row, x_vals, t_vals, extra: dict) -> Tuple[List, List]:
-        if mode == "y=f(x)":
-            return filter_none(x_vals, sample_y(expr, x_vals, extra))
-        if mode == "r=f(t)":
-            theta = linspace(_POLAR_THETA_START, _POLAR_THETA_END, len(x_vals))
-            return sample_polar(expr, theta, extra)
-        if mode == "param":
-            expr2 = row.get_expr2()
-            if not expr2:
-                return _EMPTY_XY
-            return sample_parametric(expr, expr2, t_vals, extra)
-        return _EMPTY_XY
-
-    def _replot_derivs(self, x_vals, extra: dict):
-        """Recompute derivative/integral overlay lines using finite sampling."""
+    def _submit_derivs(self, x_arr, extra: dict):
         dp = self._panel.deriv_panel
         idx = dp.source_idx()
         rows = self._panel.func_rows
@@ -204,14 +244,18 @@ class Plotter:
                     active_keys.add(k)
                     if k not in dl:
                         dl[k] = self._chart.plot(
-                            label=self._DERIV_LABELS[sfx],
-                            color=self._DERIV_COLORS[sfx],
+                            label=_DERIV_LABELS[sfx],
+                            color=_DERIV_COLORS[sfx],
                             width=1,
                         )
-                    ys = self._SAMPLERS[sfx](expr, x_vals, extra)
-                    cx, cy = filter_none(x_vals, ys)
-                    dl[k].setData(xs=list(cx), ys=list(cy))
-                    dl[k].setVisible(True)
+                    task_id = str(uuid.uuid4())
+                    self._inflight_derivs[task_id] = _InflightDeriv(task_id, k, dl)
+                    if sfx == "_d":
+                        self._pool.submit_deriv(task_id, expr, x_arr, dict(extra), DERIV_H)
+                    elif sfx == "_d2":
+                        self._pool.submit_deriv2(task_id, expr, x_arr, dict(extra), DERIV_H)
+                    else:
+                        self._pool.submit_integral(task_id, expr, x_arr, dict(extra))
         for k in list(dl.keys()):
             if k not in active_keys:
                 dl[k].setData(xs=[], ys=[])

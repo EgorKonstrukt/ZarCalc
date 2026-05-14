@@ -6,15 +6,17 @@
 # cython: initializedcheck=False
 # cython: infer_types=True
 # cython: profile=False
+# cython: annotation_typing=False
 
 import math
 import numpy as np
 cimport numpy as cnp
-from libc.math cimport isfinite, floor, fabs
+from libc.math cimport isfinite, floor, fabs, cos, sin
 
 cnp.import_array()
 
 ctypedef cnp.float64_t F64
+ctypedef cnp.uint8_t U8
 
 DEF _DISC_FACTOR = 10.0
 DEF _ADAPTIVE_REFINE_PTS = 128
@@ -30,17 +32,22 @@ cpdef object get_compiled(str expr):
         _COMPILE_CACHE[expr] = c
     return c
 
-cdef cnp.ndarray _eval_batch_raw(object compiled, dict base_ns, cnp.ndarray x_arr, dict ns_extra):
-    cdef dict ns = {**base_ns, "x": x_arr}
+cdef inline cnp.ndarray[F64, ndim=1] _eval_batch_raw(
+    object compiled, dict base_ns, cnp.ndarray[F64, ndim=1] x_arr, dict ns_extra
+):
+    cdef dict ns
     if ns_extra:
+        ns = {**base_ns, "x": x_arr}
         ns.update(ns_extra)
+    else:
+        ns = {**base_ns, "x": x_arr}
     cdef object raw = eval(compiled, {"__builtins__": {}}, ns)
-    cdef cnp.ndarray y = np.asarray(raw, dtype=np.float64)
+    cdef cnp.ndarray[F64, ndim=1] y = np.asarray(raw, dtype=np.float64)
     if y.ndim == 0:
-        y = np.full(len(x_arr), float(y), dtype=np.float64)
+        y = np.full(x_arr.shape[0], float(y), dtype=np.float64)
     return y
 
-cpdef cnp.ndarray eval_np_batch(str expr, cnp.ndarray x_arr, dict base_ns, dict ns_extra):
+cpdef cnp.ndarray[F64, ndim=1] eval_np_batch(str expr, cnp.ndarray[F64, ndim=1] x_arr, dict base_ns, dict ns_extra):
     """Evaluate expr over x_arr using pre-compiled code and numpy namespace."""
     return _eval_batch_raw(get_compiled(expr), base_ns, x_arr, ns_extra)
 
@@ -65,7 +72,7 @@ cpdef tuple filter_none_np(object xs, list ys):
     for i in range(n):
         v = ys[i]
         y_arr[i] = <double>v if v is not None else nan_val
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1, cast=True] mask = np.isfinite(y_arr)
+    cdef cnp.ndarray[U8, ndim=1, cast=True] mask = np.isfinite(y_arr)
     return x_arr[mask].tolist(), y_arr[mask].tolist()
 
 cpdef list numerical_deriv_cy(
@@ -106,7 +113,7 @@ cpdef list numerical_integral_cy(
     """Cumulative trapezoidal integral."""
     cdef cnp.ndarray[F64, ndim=1] y_arr = _eval_batch_raw(get_compiled(expr), base_ns, x_arr, ns_extra)
     cdef Py_ssize_t n = x_arr.shape[0], i, nm1 = n - 1
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1, cast=True] fin_mask = np.isfinite(y_arr)
+    cdef cnp.ndarray[U8, ndim=1, cast=True] fin_mask = np.isfinite(y_arr)
     cdef cnp.ndarray[F64, ndim=1] y_safe = np.where(fin_mask, y_arr, 0.0)
     cdef cnp.ndarray[F64, ndim=1] cumsum = np.empty(n, dtype=np.float64)
     cdef double running = 0.0
@@ -137,15 +144,18 @@ cpdef tuple sample_polar_cy(
     dict ns_extra
 ):
     """Vectorised r=f(theta) -> (xs, ys) sampling."""
-    cdef dict ns = {**base_ns, "t": t_arr, "theta": t_arr}
+    cdef dict ns
     if ns_extra:
+        ns = {**base_ns, "t": t_arr, "theta": t_arr}
         ns.update(ns_extra)
+    else:
+        ns = {**base_ns, "t": t_arr, "theta": t_arr}
     cdef cnp.ndarray[F64, ndim=1] r_arr = np.asarray(
         eval(get_compiled(expr), {"__builtins__": {}}, ns), dtype=np.float64
     )
     if r_arr.ndim == 0:
-        r_arr = np.full(len(t_arr), float(r_arr), dtype=np.float64)
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1, cast=True] mask = np.isfinite(r_arr)
+        r_arr = np.full(t_arr.shape[0], float(r_arr), dtype=np.float64)
+    cdef cnp.ndarray[U8, ndim=1, cast=True] mask = np.isfinite(r_arr)
     cdef cnp.ndarray[F64, ndim=1] t_f = t_arr[mask]
     cdef cnp.ndarray[F64, ndim=1] r_f = r_arr[mask]
     return (r_f * np.cos(t_f)).tolist(), (r_f * np.sin(t_f)).tolist()
@@ -158,10 +168,13 @@ cpdef tuple sample_parametric_cy(
     dict ns_extra
 ):
     """Vectorised parametric x(t), y(t) sampling."""
-    cdef dict ns = {**base_ns, "t": t_arr}
+    cdef dict ns
     if ns_extra:
+        ns = {**base_ns, "t": t_arr}
         ns.update(ns_extra)
-    cdef Py_ssize_t nt = len(t_arr)
+    else:
+        ns = {**base_ns, "t": t_arr}
+    cdef Py_ssize_t nt = t_arr.shape[0]
     cdef cnp.ndarray[F64, ndim=1] xv = np.asarray(
         eval(get_compiled(x_expr), {"__builtins__": {}}, ns), dtype=np.float64
     )
@@ -170,7 +183,7 @@ cpdef tuple sample_parametric_cy(
     )
     if xv.ndim == 0: xv = np.full(nt, float(xv), dtype=np.float64)
     if yv.ndim == 0: yv = np.full(nt, float(yv), dtype=np.float64)
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1, cast=True] mask = np.isfinite(xv) & np.isfinite(yv)
+    cdef cnp.ndarray[U8, ndim=1, cast=True] mask = np.isfinite(xv) & np.isfinite(yv)
     return xv[mask].tolist(), yv[mask].tolist()
 
 cdef cnp.ndarray[F64, ndim=1] _np_diff_abs(cnp.ndarray[F64, ndim=1] a, Py_ssize_t n):
@@ -182,11 +195,8 @@ cdef cnp.ndarray[F64, ndim=1] _np_diff_abs(cnp.ndarray[F64, ndim=1] a, Py_ssize_
         out[i] = diff if diff >= 0.0 else -diff
     return out
 
-cdef cnp.ndarray[cnp.uint8_t, ndim=1] _both_finite(
-    cnp.ndarray[cnp.uint8_t, ndim=1, cast=True] fin,
-    Py_ssize_t n
-):
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1] out = np.empty(n, dtype=np.uint8)
+cdef cnp.ndarray[U8, ndim=1] _both_finite(cnp.ndarray[U8, ndim=1, cast=True] fin, Py_ssize_t n):
+    cdef cnp.ndarray[U8, ndim=1] out = np.empty(n, dtype=np.uint8)
     cdef Py_ssize_t i
     for i in range(n):
         out[i] = fin[i] & fin[i + 1]
@@ -208,7 +218,7 @@ cpdef tuple sample_y_adaptive_cy(
         y_arr = _eval_batch_raw(c, base_ns, x_arr, ns_extra)
     except Exception:
         return list(x_arr), [None] * n
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1, cast=True] fin = np.isfinite(y_arr)
+    cdef cnp.ndarray[U8, ndim=1, cast=True] fin = np.isfinite(y_arr)
     cdef cnp.ndarray[F64, ndim=1] y_work = np.where(fin, y_arr, np.nan)
     cdef cnp.ndarray[F64, ndim=1] fin_vals = y_arr[fin]
     cdef double y_range = float(np.ptp(fin_vals)) if len(fin_vals) >= 2 else 1.0
@@ -217,7 +227,7 @@ cpdef tuple sample_y_adaptive_cy(
     cdef double threshold = y_range * _DISC_FACTOR
     cdef Py_ssize_t nm1 = n - 1
     cdef cnp.ndarray[F64, ndim=1] dy_abs = _np_diff_abs(y_work, nm1)
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1] both_fin = _both_finite(fin, nm1)
+    cdef cnp.ndarray[U8, ndim=1] both_fin = _both_finite(fin, nm1)
     cdef cnp.ndarray jumps = np.where((dy_abs > threshold) | (both_fin == 0))[0]
     cdef Py_ssize_t nj = len(jumps), ji
     for ji in jumps:
@@ -256,22 +266,21 @@ cpdef tuple sample_y_adaptive_cy(
     cdef cnp.ndarray[F64, ndim=1] all_rx, all_ry
     all_rx = np.concatenate(sub_arrs) if nm > 0 else np.empty(0, dtype=np.float64)
     cdef double ry_range, ry_thresh
-    cdef Py_ssize_t nrx = len(all_rx), di, nrxm1
-    cdef object ry_fin, ry_vals, dy_r, both_r, disc_r
+    cdef Py_ssize_t nrx = all_rx.shape[0], di, nrxm1
     cdef cnp.ndarray[F64, ndim=1] dy_r_arr
-    cdef cnp.ndarray[cnp.uint8_t, ndim=1] both_r_arr
+    cdef cnp.ndarray[U8, ndim=1] both_r_arr
     if nrx > 0:
         try:
             all_ry = _eval_batch_raw(c, base_ns, all_rx, ns_extra)
-            ry_fin = np.isfinite(all_ry)
-            ry_vals = all_ry[ry_fin]
+            ry_fin_mask = np.isfinite(all_ry)
+            ry_vals = all_ry[ry_fin_mask]
             ry_range = float(np.ptp(ry_vals)) if len(ry_vals) else y_range
             ry_thresh = (ry_range or y_range) * _DISC_FACTOR
             if threshold > ry_thresh:
                 ry_thresh = threshold
             nrxm1 = nrx - 1
             dy_r_arr = _np_diff_abs(all_ry, nrxm1)
-            both_r_arr = _both_finite(np.asarray(ry_fin, dtype=np.uint8), nrxm1)
+            both_r_arr = _both_finite(np.asarray(ry_fin_mask, dtype=np.uint8), nrxm1)
             disc_r = np.where((dy_r_arr > ry_thresh) | (both_r_arr == 0))[0]
             for di in disc_r:
                 all_ry[di] = np.nan
@@ -282,7 +291,7 @@ cpdef tuple sample_y_adaptive_cy(
             all_ry = np.empty(0, dtype=np.float64)
     else:
         all_ry = np.empty(0, dtype=np.float64)
-    nrx = len(all_rx)
+    nrx = all_rx.shape[0]
     cdef cnp.ndarray[F64, ndim=1] combined_x, combined_y
     if nm > 0 and nrx > 0:
         covered = np.zeros(n, dtype=bool)
@@ -299,6 +308,57 @@ cpdef tuple sample_y_adaptive_cy(
         combined_y = y_work
     return combined_x.tolist(), finalize_y(np.ascontiguousarray(combined_y, dtype=np.float64))
 
-cpdef cnp.ndarray linspace_cy(double a, double b, Py_ssize_t n):
+cpdef cnp.ndarray[F64, ndim=1] linspace_cy(double a, double b, Py_ssize_t n):
     """Fast linspace returning a numpy array."""
     return np.linspace(a, b, n, dtype=np.float64)
+
+cpdef list batch_sample_y(list exprs, cnp.ndarray[F64, ndim=1] x_arr, dict base_ns, dict ns_extra):
+    """Evaluate multiple expressions over the same x_arr, returning list of result lists."""
+    cdef list results = []
+    cdef str expr
+    for expr in exprs:
+        try:
+            results.append(finalize_y(_eval_batch_raw(get_compiled(expr), base_ns, x_arr, ns_extra)))
+        except Exception:
+            results.append([None] * x_arr.shape[0])
+    return results
+
+cpdef tuple batch_deriv_trio(
+    str expr,
+    cnp.ndarray[F64, ndim=1] x_arr,
+    dict base_ns,
+    dict ns_extra,
+    double h,
+    bint want_d1,
+    bint want_d2,
+    bint want_int
+):
+    """Compute d1, d2, integral in one pass, reusing shared evaluations."""
+    cdef object c = get_compiled(expr)
+    cdef cnp.ndarray[F64, ndim=1] yc, yp, ym
+    cdef list d1 = [], d2 = [], ig = []
+    cdef Py_ssize_t n = x_arr.shape[0], i, nm1 = n - 1
+    cdef double running
+    cdef cnp.ndarray[U8, ndim=1, cast=True] fin_mask
+    if want_d1 or want_d2:
+        yp = _eval_batch_raw(c, base_ns, x_arr + h, ns_extra)
+        ym = _eval_batch_raw(c, base_ns, x_arr - h, ns_extra)
+        if want_d1:
+            d1 = finalize_y((yp - ym) * (0.5 / h))
+        if want_d2:
+            yc = _eval_batch_raw(c, base_ns, x_arr, ns_extra)
+            d2 = finalize_y((yp - 2.0 * yc + ym) * (1.0 / (h * h)))
+    if want_int:
+        if not want_d2:
+            yc = _eval_batch_raw(c, base_ns, x_arr, ns_extra)
+        fin_mask = np.isfinite(yc)
+        y_safe = np.where(fin_mask, yc, 0.0)
+        running = 0.0
+        ig = [None] * n
+        ig[0] = 0.0 if fin_mask[0] else None
+        for i in range(nm1):
+            if fin_mask[i] and fin_mask[i + 1]:
+                running += (y_safe[i] + y_safe[i + 1]) * 0.5 * (x_arr[i + 1] - x_arr[i])
+            if fin_mask[i + 1]:
+                ig[i + 1] = running
+    return d1, d2, ig

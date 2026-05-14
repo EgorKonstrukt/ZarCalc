@@ -1,5 +1,8 @@
 from __future__ import annotations
+import sys
 import time
+import logging
+import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -7,6 +10,30 @@ from .console_model import ConsoleBuffer, ConsoleLine, MsgKind, make_line
 from .repl_executor import ReplExecutor
 if TYPE_CHECKING:
     from .debug_tools import DebugTools
+
+
+class _ConsoleLogHandler(logging.Handler):
+    """Logging handler that forwards records to the console API."""
+
+    def __init__(self, api: "ConsoleAPI") -> None:
+        super().__init__()
+        self._api = api
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            msg = self.format(record)
+        except Exception:
+            msg = record.getMessage()
+        level = record.levelno
+        if level >= logging.ERROR:
+            self._api.log_error(msg, source="log")
+        elif level >= logging.WARNING:
+            self._api.log_warn(msg, source="log")
+        elif level >= logging.DEBUG:
+            self._api.log_debug(msg, source="log")
+        else:
+            self._api.log_info(msg, source="log")
+
 
 class ConsoleAPI(QObject):
     """
@@ -16,10 +43,8 @@ class ConsoleAPI(QObject):
     this object, available via::
 
         api = context.get_service("console_api")
-
-    Plugins can extend functionality by calling register_command() or
-    register_formatter().
     """
+
     line_appended = pyqtSignal(object)
     cleared = pyqtSignal()
     tab_added = pyqtSignal(str, str)
@@ -35,6 +60,38 @@ class ConsoleAPI(QObject):
         self._formatters: Dict[MsgKind, Callable[[str], str]] = {}
         self._watch_timers: list = []
         self._debug: Optional["DebugTools"] = None
+        self._log_handler: Optional[_ConsoleLogHandler] = None
+        self._prev_excepthook = None
+        self._install_excepthook()
+        self._install_log_handler()
+
+    def _install_excepthook(self) -> None:
+        self._prev_excepthook = sys.excepthook
+
+        def _hook(exc_type, exc_value, exc_tb):
+            text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+            self.write_stderr(f"[Unhandled exception]\n{text}", source="app")
+            if self._prev_excepthook and self._prev_excepthook is not sys.__excepthook__:
+                self._prev_excepthook(exc_type, exc_value, exc_tb)
+            else:
+                sys.__excepthook__(exc_type, exc_value, exc_tb)
+
+        sys.excepthook = _hook
+
+    def _install_log_handler(self) -> None:
+        handler = _ConsoleLogHandler(self)
+        handler.setFormatter(logging.Formatter("%(name)s: %(message)s"))
+        handler.setLevel(logging.WARNING)
+        logging.getLogger().addHandler(handler)
+        self._log_handler = handler
+
+    def _uninstall_hooks(self) -> None:
+        if self._prev_excepthook is not None:
+            sys.excepthook = self._prev_excepthook
+            self._prev_excepthook = None
+        if self._log_handler is not None:
+            logging.getLogger().removeHandler(self._log_handler)
+            self._log_handler = None
 
     @property
     def debug(self) -> "DebugTools":
@@ -52,11 +109,7 @@ class ConsoleAPI(QObject):
         self._executor.update_namespace(ns)
 
     def register_command(self, name: str, handler: Callable[[List[str]], None]) -> None:
-        """
-        Register a slash-command callable as /name arg1 arg2 ...
-
-        handler receives a list of string arguments.
-        """
+        """Register a slash-command as /name arg1 arg2 ..."""
         self._custom_commands[name.lstrip("/")] = handler
 
     def unregister_command(self, name: str) -> None:
@@ -199,3 +252,10 @@ class ConsoleAPI(QObject):
         for name in sorted(self._custom_commands):
             lines.append(f"  /{name}")
         self.log_info("\n".join(lines))
+
+    def shutdown(self) -> None:
+        """Release global hooks. Call from plugin on_unload."""
+        self._uninstall_hooks()
+        for t in self._watch_timers:
+            t.stop()
+        self._watch_timers.clear()

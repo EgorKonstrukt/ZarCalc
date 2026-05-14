@@ -137,6 +137,12 @@ class ScriptAPI:
         self._data_store: Dict[str, Any] = {}
         self._event_hooks: Dict[str, List[Callable]] = {}
 
+    def _console_api(self):
+        return self._ctx.get_service("console_api")
+
+    def _tab_id(self) -> str:
+        return self._row._tab_id or "__repl__"
+
     def _get_chart(self):
         return self._ctx.chart
 
@@ -358,18 +364,21 @@ class ScriptAPI:
 
     def log(self, *args):
         msg = " ".join(str(a) for a in args)
-        if self._row._console:
-            self._row._console.append_stdout(msg, self._row._script_name())
+        api = self._console_api()
+        if api is not None:
+            api.write(msg, tab_id=self._tab_id(), source=self._row._script_name())
 
     def log_warn(self, *args):
         msg = " ".join(str(a) for a in args)
-        if self._row._console:
-            self._row._console.append_warn(msg, self._row._script_name())
+        api = self._console_api()
+        if api is not None:
+            api.log_warn(msg, tab_id=self._tab_id(), source=self._row._script_name())
 
     def log_error(self, *args):
         msg = " ".join(str(a) for a in args)
-        if self._row._console:
-            self._row._console.append_stderr(msg, self._row._script_name())
+        api = self._console_api()
+        if api is not None:
+            api.write_stderr(msg, tab_id=self._tab_id(), source=self._row._script_name())
 
     def replot(self):
         self._ctx.request_replot()

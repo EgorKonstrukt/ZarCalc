@@ -1,6 +1,8 @@
 import math
+from concurrent.futures import Future, as_completed
 from typing import List, Optional, Dict, Tuple
 from constants import SAFE_NS, DERIV_H
+from compute_pool import get_pool
 try:
     import numpy as np
     _NP_OK = True
@@ -46,10 +48,11 @@ _COMPILE_CACHE: Dict[str, object] = {}
 _use_numpy = True
 
 def _compile(expr: str) -> object:
-    if expr not in _COMPILE_CACHE:
-        _COMPILE_CACHE[expr] = compile(expr, "<expr>", "eval")
-        print(1)
-    return _COMPILE_CACHE[expr]
+    c = _COMPILE_CACHE.get(expr)
+    if c is None:
+        c = compile(expr, "<expr>", "eval")
+        _COMPILE_CACHE[expr] = c
+    return c
 
 def set_use_numpy(val: bool):
     global _use_numpy
@@ -357,6 +360,24 @@ def filter_none(xs, ys: List[Optional[float]]) -> Tuple[List[float], List[float]
     if not pairs:
         return [], []
     return list(zip(*pairs))
+
+def eval_row_parallel(tasks: list) -> list:
+    """Evaluate multiple (expr, x_vals, extra, mode) tasks in parallel via thread pool."""
+    pool = get_pool()
+    def _run(t):
+        expr, x_vals, extra, mode = t
+        try:
+            if mode == "y=f(x)":
+                return filter_none(x_vals, sample_y(expr, x_vals, extra))
+            if mode == "r=f(t)":
+                import math as _math
+                theta = linspace(0.0, 2 * _math.pi, len(x_vals))
+                return sample_polar(expr, theta, extra)
+        except Exception:
+            return [], []
+        return [], []
+    futures = [pool.submit(_run, t) for t in tasks]
+    return [f.result() for f in futures]
 
 def expr_to_latex(expr: str) -> str:
     """Convert a Python expression string to LaTeX via sympy_engine."""

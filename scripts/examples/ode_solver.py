@@ -17,7 +17,6 @@ T0    = 0.0
 T1    = 20.0
 STEPS = 2000
 
-
 def rk4_step(t, y, dy, h, zeta, omega):
     def accel(y_, dy_):
         return -2.0 * zeta * omega * dy_ - omega**2 * y_

@@ -15,8 +15,10 @@ PLUGIN_META = PluginMeta(
     dependencies=[],
 )
 
+
 class ConsolePlugin(DockPlugin):
     """DockPlugin that provides the main Python console dock."""
+
     meta = PLUGIN_META
     DOCK_ID = "zarcalc.console"
     DEFAULT_AREA = 8
@@ -62,11 +64,11 @@ class ConsolePlugin(DockPlugin):
         pass
 
     def on_unload(self, context: "AppContext") -> None:
+        if self._api:
+            self._api.shutdown()
         if self._dock:
             self._dock.close()
-        if self._api:
-            for t in self._api._watch_timers:
-                t.stop()
+
 
 def get_plugin() -> ConsolePlugin:
     return ConsolePlugin()
