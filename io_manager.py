@@ -54,6 +54,10 @@ class IoManager:
             "state":   self._panel.to_state(),
             "scripts": sp.to_state() if sp is not None else [],
         }
+        doc["area"] = self._panel._context.get_service("area_panel").to_state() \
+                      if self._panel._context and \
+                         self._panel._context.get_service("area_panel") else {}
+
         try:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(doc, f, indent=2, ensure_ascii=False)
@@ -68,6 +72,12 @@ class IoManager:
             sp = self._script_panel()
             if sp is not None:
                 sp.apply_state(doc.get("scripts", []))
+
+            area_svc = self._panel._context.get_service("area_panel") \
+                if self._panel._context else None
+            if area_svc and "area" in doc:
+                area_svc.apply_state(doc["area"])
+
             self._current_path = path
         except Exception as exc:
             QMessageBox.critical(self._parent, "Load Error", str(exc))

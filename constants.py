@@ -1,7 +1,7 @@
 import math
 
 APP_NAME = "ZarCalc"
-APP_VERSION = "1.7.0"
+APP_VERSION = "1.8.0"
 
 COLORS = [
     "#e74c3c", "#3498db", "#2ecc71", "#f39c12", "#9b59b6",
