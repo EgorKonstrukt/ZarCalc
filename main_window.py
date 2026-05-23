@@ -69,6 +69,7 @@ class MainWindow(QMainWindow):
             plugins_dir=_PLUGINS_DIR,
             state_dir=_BASE_DIR,
         )
+
         self._build_menu()
         self._context.register_menu("File",    self._file_menu)
         self._context.register_menu("Edit",    self._edit_menu)
@@ -80,6 +81,7 @@ class MainWindow(QMainWindow):
         self._panel.add_function_from_state(_INITIAL_FUNCTION)
         self._settings_registry = SettingsRegistry()
         self._context.register_service("settings_registry", self._settings_registry)
+
         self._plugin_manager.initialise(self._context)
         self._integrate_plugins()
 
