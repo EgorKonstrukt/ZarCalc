@@ -1,0 +1,49 @@
+{
+  "app": "ZCalc",
+  "version": "1.4.1",
+  "state": {
+    "items": [
+      {
+        "expr": "sin(x)",
+        "expr2": "",
+        "mode": "y=f(x)",
+        "color": "#3498db",
+        "width": 2,
+        "enabled": true,
+        "type": "function"
+      },
+      {
+        "type": "plugin_item",
+        "plugin_id": "zcalc.script",
+        "script_path": "C:/Users/Zarrakun/PycharmProjects/ZCalc/scripts/examples/fourier_series.py",
+        "running": false
+      },
+      {
+        "name": "terms",
+        "lo": 1.0,
+        "hi": 40.0,
+        "val": 5.0,
+        "speed": 1.0,
+        "anim_mode": "loop",
+        "type": "param"
+      }
+    ],
+    "settings": {
+      "xmin": -10.0,
+      "xmax": 10.0,
+      "ymin": -8.0,
+      "ymax": 8.0,
+      "tmin": -6.28,
+      "tmax": 6.28,
+      "samples": 800,
+      "infinite": true
+    },
+    "derivs": {
+      "d1": false,
+      "d2": false,
+      "ig": false,
+      "src": "f1"
+    }
+  },
+  "scripts": []
+}
