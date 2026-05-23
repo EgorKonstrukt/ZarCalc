@@ -1,31 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="e484c6ca-347a-49e8-a772-6d54a4eb5d5e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/ZCalc.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ZCalc.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/anim_panel.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/constants.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/expr_item.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/formula_editor.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/formula_input.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/function_row.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/history.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/io_manager.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/latex_label.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main_window.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/math_engine.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/panels.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/param_slider.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/plotter.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/settings_dialog.py" afterDir="false" />
+    <list default="true" id="e484c6ca-347a-49e8-a772-6d54a4eb5d5e" name="Changes" comment="1.7.0">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,6 +19,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;EgorKonstrukt&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/EgorKonstrukt/ZCalc.git&quot;,
+    &quot;accountId&quot;: &quot;5154d102-63cd-46e9-aedd-82f07c61cfd4&quot;
+  }
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 7
 }</component>
@@ -54,10 +43,16 @@
   &quot;keyToString&quot;: {
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;Python.ZCalc (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.ZarCalc.executor&quot;: &quot;Run&quot;,
     &quot;Python.__init__.executor&quot;: &quot;Run&quot;,
     &quot;Python.calc.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
     &quot;Python.main_window.executor&quot;: &quot;Run&quot;,
+    &quot;Python.pack_plugin.executor&quot;: &quot;Run&quot;,
+    &quot;Python.settings_registry.executor&quot;: &quot;Run&quot;,
+    &quot;Python.setup.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;last_opened_file_path&quot;: &quot;C:/Users/Zarrakun/PycharmProjects/ZCalc&quot;,
@@ -67,10 +62,20 @@
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc" />
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\plugins\scripts" />
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\plugins" />
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\1" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\core\items" />
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\core" />
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\core\plugins" />
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\panels" />
+      <recent name="C:\Users\Zarrakun\PycharmProjects\ZCalc\scripts" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.ZCalc (1)">
-    <configuration name="ZCalc (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+  <component name="RunManager" selected="Python.ZarCalc">
+    <configuration name="ZarCalc" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ZCalc" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -84,7 +89,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/ZCalc.py" />
+      <option name="SCRIPT_NAME" value="C:\Users\Zarrakun\PycharmProjects\ZCalc\ZarCalc.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -93,7 +98,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="ZCalc" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="ZarCalc" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ZCalc" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -107,7 +112,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="C:\Users\Zarrakun\PycharmProjects\ZCalc\ZCalc.py" />
+      <option name="SCRIPT_NAME" value="C:\Users\Zarrakun\PycharmProjects\ZCalc\ZarCalc.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -139,7 +144,30 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="main_window" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ZCalc" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/1" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/1/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="pack_plugin" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ZCalc" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -153,7 +181,30 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main_window.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/pack_plugin.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="setup" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ZCalc" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/setup.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -164,17 +215,18 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.ZCalc (1)" />
-        <item itemvalue="Python.ZCalc" />
-        <item itemvalue="Python.__init__" />
-        <item itemvalue="Python.main_window" />
+        <item itemvalue="Python.ZarCalc" />
+        <item itemvalue="Python.setup" />
+        <item itemvalue="Python.ZarCalc" />
+        <item itemvalue="Python.pack_plugin" />
+        <item itemvalue="Python.main" />
       </list>
     </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-0978a7220b69-9867c7d4c0a4-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.28294.336" />
+        <option value="bundled-python-sdk-1cd77e80b48f-6d6dccd035ac-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.32098.74" />
       </set>
     </attachedChunks>
   </component>
@@ -186,6 +238,99 @@
       <option name="presentableId" value="Default" />
       <updated>1776746174490</updated>
     </task>
+    <task id="LOCAL-00001" summary="1.0.0">
+      <option name="closed" value="true" />
+      <created>1776841531532</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1776841531532</updated>
+    </task>
+    <task id="LOCAL-00002" summary="1.1.1">
+      <option name="closed" value="true" />
+      <created>1776954096430</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1776954096430</updated>
+    </task>
+    <task id="LOCAL-00003" summary="1.1.1">
+      <option name="closed" value="true" />
+      <created>1776954127529</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1776954127529</updated>
+    </task>
+    <task id="LOCAL-00004" summary="1.2.0">
+      <option name="closed" value="true" />
+      <created>1777092664973</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1777092664973</updated>
+    </task>
+    <task id="LOCAL-00005" summary="1.3.0">
+      <option name="closed" value="true" />
+      <created>1777098743006</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1777098743006</updated>
+    </task>
+    <task id="LOCAL-00006" summary="1.4.0">
+      <option name="closed" value="true" />
+      <created>1777136675062</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1777136675062</updated>
+    </task>
+    <task id="LOCAL-00007" summary="1.4.1">
+      <option name="closed" value="true" />
+      <created>1777137879988</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1777137879988</updated>
+    </task>
+    <task id="LOCAL-00008" summary="1.5.0">
+      <option name="closed" value="true" />
+      <created>1777451793748</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1777451793748</updated>
+    </task>
+    <task id="LOCAL-00009" summary="1.6.0">
+      <option name="closed" value="true" />
+      <created>1777697444856</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1777697444856</updated>
+    </task>
+    <task id="LOCAL-00010" summary="1.7.0">
+      <option name="closed" value="true" />
+      <created>1778776233779</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1778776233779</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="1.0.0" />
+    <MESSAGE value="1.1.1" />
+    <MESSAGE value="1.2.0" />
+    <MESSAGE value="1.3.0" />
+    <MESSAGE value="1.4.0" />
+    <MESSAGE value="1.4.1" />
+    <MESSAGE value="1.5.0" />
+    <MESSAGE value="1.6.0" />
+    <MESSAGE value="1.7.0" />
+    <option name="LAST_COMMIT_MESSAGE" value="1.7.0" />
   </component>
 </project>
